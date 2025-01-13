@@ -1,0 +1,70 @@
+mkdir hospital-food-management-backend
+cd hospital-food-management-backend
+npm init -y
+npm install express sqlite3 cors body-parser nodemon
+const express = require('express');
+const bodyParser = require('body-parser');
+const sqlite3 = require('sqlite3').verbose();
+const cors = require('cors');
+const app = express();
+const db = new sqlite3.Database(':memory:');
+app.use(cors());
+app.use(bodyParser.json());
+// Initialize database
+db.serialize(() => {
+  db.run("CREATE TABLE patient (id INTEGER PRIMARY KEY, name TEXT, room_number TEXT)");
+  db.run("INSERT INTO patient (name, room_number) VALUES ('John Doe', '101')");
+});
+// Get all patients
+app.get('/patients', (req, res) => {
+  db.all("SELECT * FROM patient", [], (err, rows) => {
+    res.json(rows);
+  });
+});
+// Add a patient
+app.post('/patients', (req, res) => {
+  const { name, room_number } = req.body;
+  db.run("INSERT INTO patient (name, room_number) VALUES (?, ?)", [name, room_number], function(err) {
+    res.json({ id: this.lastID });
+  });
+});
+app.listen(3001, () => {
+  console.log('Server running on http://localhost:3001');
+});
+nodemon index.js
+npx create-react-app hospital-food-management-frontend
+cd hospital-food-management-frontend
+npm install axios
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
+const PatientList = () => {
+  const [patients, setPatients] = useState([]);
+  useEffect(() => {
+    axios.get('http://localhost:3001/patients')
+      .then(response => setPatients(response.data))
+      .catch(error => console.error(error));
+  }, []);
+  return (
+    <div>
+      <h1>Patient List</h1>
+      <ul>
+        {patients.map(patient => (
+          <li key={patient.id}>{patient.name} - Room {patient.room_number}</li>
+        ))}
+      </ul>
+    </div>
+  );
+};
+export default PatientList;
+import React from 'react';
+import PatientList from './PatientList';
+function App() {
+  return (
+    <div className="App">
+      <h1>Hospital Food Management System</h1>
+      <PatientList />
+    </div>
+  );
+}
+export default App;
+npm start
